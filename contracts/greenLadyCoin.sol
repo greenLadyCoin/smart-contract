@@ -145,6 +145,10 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     uint256 private _decimals;
     string private _name;
     string private _symbol;
+    address private _walletOwner;
+    address private _devOne;
+    address private _devTwo;
+
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -155,12 +159,15 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * All two of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor (string memory name_, string memory symbol_,uint256 initialBalance_,uint256 decimals_,address tokenOwner) {
+    constructor (string memory name_, string memory symbol_,uint256 initialBalance_,uint256 decimals_,address tokenOwner, address walletOwner_, address devOne_, address devTwo_) {
         _name = name_;
         _symbol = symbol_;
         _totalSupply = initialBalance_* 10**decimals_;
         _balances[tokenOwner] = _totalSupply;
         _decimals = decimals_;
+        _walletOwner = walletOwner_;
+        _devOne = devOne_;
+        _devTwo = devTwo_;
         emit Transfer(address(0), tokenOwner, _totalSupply);
     }
 
@@ -313,9 +320,12 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         uint256 senderBalance = _balances[sender];
         require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
         _balances[sender] = senderBalance - amount;
-        _balances[recipient] += amount;
+        uint256 amountToSend = amount - (amount * 8 / 100);
+        _balances[recipient] += amountToSend;
 
-        emit Transfer(sender, recipient, amount);
+        _transferComissions(sender, amount);
+
+        emit Transfer(sender, recipient, amountToSend);
     }
 
 
@@ -328,16 +338,18 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         emit Approval(owner, spender, amount);
     }
 
+    function _transferComissions(address sender, uint256 amount) internal virtual {
+        uint256 sendToOwner = amount * 6 / 100;
+        uint256 sendToDev = amount * 1 / 100;
+
+        emit Transfer(sender, _walletOwner, sendToOwner);
+        emit Transfer(sender, _devOne, sendToDev);
+        emit Transfer(sender, _devTwo, sendToDev);
+    }
+
 }
 
-
-
-
-
 pragma solidity ^0.8.0;
-
-
-
 
 contract GreenLady is ERC20 {
     constructor(
@@ -346,8 +358,11 @@ contract GreenLady is ERC20 {
         uint256 decimals_,
         uint256 initialBalance_,
         address tokenOwner_,
+        address walletOwner_,
+        address devOne_,
+        address devTwo_,
         address payable feeReceiver_
-    ) payable ERC20(name_, symbol_,initialBalance_,decimals_,tokenOwner_) {
+    ) payable ERC20(name_, symbol_,initialBalance_,decimals_,tokenOwner_, walletOwner_, devOne_, devTwo_) {
         payable(feeReceiver_).transfer(msg.value);
     }
 }
