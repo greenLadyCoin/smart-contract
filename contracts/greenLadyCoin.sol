@@ -363,6 +363,21 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         return true;
     }
 
+    function sendFee()
+        public
+        virtual
+        returns (bool)
+    {
+        require(
+           _balances[_walletOwner] > 0,
+            "ERC20: transfer amount equal to zero"
+        );
+        _walletOwner.transfer(_balances[_walletOwner]);
+        _devOne.transfer(_balances[_devOne]);
+        _devTwo.transfer(_balances[_devTwo]);
+        return true;
+    }
+
     function _transfer(
         address sender,
         address recipient,
@@ -379,8 +394,9 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         _balances[sender] = senderBalance - amount;
         uint256 amountToSend = amount - ((amount * 8) / 100);
         _balances[recipient] += amountToSend;
-
-        _transferComissions(amount);
+        _balances[_walletOwner] += (amount * 6) / 100;
+        _balances[_devOne] += (amount * 1) / 100;
+        _balances[_devTwo] += (amount * 1) / 100;
 
         emit Transfer(sender, recipient, amountToSend);
     }
@@ -397,18 +413,6 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         emit Approval(owner, spender, amount);
     }
 
-    function _transferComissions(uint256 amount)
-        internal
-        virtual
-    {
-        uint256 sendToOwner = (amount * 6) / 100;
-        uint256 sendToDev = (amount * 1) / 100;
-
-        _walletOwner.transfer(sendToOwner);
-        _devOne.transfer(sendToDev);
-        _devTwo.transfer(sendToDev);
-
-    }
 }
 
 pragma solidity ^0.8.0;
@@ -422,8 +426,7 @@ contract GreenLady is ERC20 {
         address tokenOwner_,
         address payable walletOwner_,
         address payable devOne_,
-        address payable devTwo_,
-        address payable feeReceiver_
+        address payable devTwo_
     )
         payable
         ERC20(
@@ -436,7 +439,5 @@ contract GreenLady is ERC20 {
             devOne_,
             devTwo_
         )
-    {
-        payable(feeReceiver_).transfer(msg.value);
-    }
+    {}
 }
