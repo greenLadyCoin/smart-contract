@@ -148,6 +148,8 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     address payable private _walletOwner;
     address payable private _devOne;
     address payable private _devTwo;
+    bool private _isFeeEnabled = false;
+
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -377,12 +379,14 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
             "ERC20: transfer amount exceeds balance"
         );
         _balances[sender] = senderBalance - amount;
-        uint256 amountToSend = amount - ((amount * 8) / 100);
-        _balances[recipient] += amountToSend;
-        _balances[_walletOwner] += (amount * 5) / 100;
-        _balances[_devOne] += (amount * 1) / 100;
-        _balances[_devTwo] += (amount * 1) / 100;
-
+        uint256 amountToSend = amount;
+        if (_isFeeEnabled == true) {
+            amountToSend = amount - ((amount * 5) / 100);
+            _balances[recipient] += amountToSend;
+            _balances[_walletOwner] += (amount * 2) / 100;
+            _balances[_devOne] += (amount * 1) / 100;
+            _balances[_devTwo] += (amount * 1) / 100;
+        }
         emit Transfer(sender, recipient, amountToSend);
     }
 
@@ -396,6 +400,15 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
+    }
+
+    function EnableFee()
+        public
+        virtual
+        returns (bool)
+    {
+        _isFeeEnabled = true;
+        return true;
     }
 
 }
